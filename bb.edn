@@ -1,0 +1,14 @@
+{:tasks
+ {:init (def src "src.zip")
+  :requires ([babashka.process :as p])
+  build {:doc "Build lambda"
+         :task (clojure "-T:build uber")}
+  deploy {:doc "Deploy lambda"
+          :task (shell {:dir "terraform"} "terraform" "apply")}
+  invoke {:doc "Invoke lambda"
+          :task (let [lambda-name (:out (shell {:out :string :dir "terraform"} "terraform" "output" "-raw" "lambda_name"))]
+                  (shell "aws" "lambda" "invoke" "--function-name" lambda-name "out")
+                  (println (slurp "out")))}
+  tail-logs {:doc "Tail lambda logs"
+             :task (let [lambda-name (:out (shell {:out :string :dir "terraform"} "terraform" "output" "-raw" "lambda_name"))]
+                     (shell "aws" "logs" "tail" "--follow" (str "/aws/lambda/" lambda-name)))}}}

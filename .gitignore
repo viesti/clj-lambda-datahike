@@ -1,0 +1,11 @@
+.cpcache
+.nrepl-port
+.lsp/.cache
+.clj-kondo/.cache
+.clj-kondo/babashka
+.clj-kondo/rewrite-clj
+target
+.terraform
+terraform.tfstate
+terraform.tfstate.backup
+out
