@@ -28,6 +28,8 @@
 
 (defn scan-db []
   (let [conn (d/connect (cfg))]
+    ;; Force a read to backing S3 store, to get fresh data
+    (swap! (:wrapped-atom conn) (fn [db] (update db :writer #(assoc % :streaming? false))))
     (d/q '[:find ?e ?n ?a
            :where
            [?e :name ?n]
