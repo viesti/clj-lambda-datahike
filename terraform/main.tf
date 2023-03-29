@@ -3,9 +3,11 @@ resource "random_pet" "demo" {
 
 data "aws_region" "current" {}
 
-resource "aws_lambda_function" "demo" {
-  function_name = "${random_pet.demo.id}-demo"
-  role          = aws_iam_role.demo.arn
+resource "aws_lambda_function" "writer" {
+  reserved_concurrent_executions = 1
+
+  function_name = "${random_pet.demo.id}-writer"
+  role          = aws_iam_role.lambda.arn
 
   handler = "clj_lambda_datahike.handler"
 
@@ -22,11 +24,36 @@ resource "aws_lambda_function" "demo" {
   environment {
     variables = {
       DATAHIKE_S3_BACKEND = aws_s3_bucket.datahike-s3-backend.id
+      BACKEND_ROLE = "writer"
     }
   }
 }
 
-resource "aws_iam_role" "demo" {
+resource "aws_lambda_function" "reader" {
+  function_name = "${random_pet.demo.id}-reader"
+  role          = aws_iam_role.lambda.arn
+
+  handler = "clj_lambda_datahike.handler"
+
+  s3_bucket        = aws_s3_bucket.lambda.id
+  s3_key           = aws_s3_object.lambda.key
+  source_code_hash = filebase64sha256("../target/lambda.jar")
+
+  runtime = "java11"
+
+  memory_size = 3008
+
+  timeout = 30
+
+  environment {
+    variables = {
+      DATAHIKE_S3_BACKEND = aws_s3_bucket.datahike-s3-backend.id
+      BACKEND_ROLE = "reader"
+    }
+  }
+}
+
+resource "aws_iam_role" "lambda" {
   name               = "${random_pet.demo.id}-demo"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -73,13 +100,13 @@ resource "aws_iam_role" "demo" {
   }
 }
 
-resource "aws_iam_role_policy_attachment" "demo" {
-  role       = aws_iam_role.demo.name
+resource "aws_iam_role_policy_attachment" "lambda" {
+  role       = aws_iam_role.lambda.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
 resource "aws_s3_bucket" "datahike-s3-backend" {
-  bucket = "${random_pet.demo.id}-demo"
+  bucket = "${random_pet.demo.id}-backend"
 }
 
 resource "aws_s3_bucket_public_access_block" "datahike-s3-backend" {

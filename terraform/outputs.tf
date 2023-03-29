@@ -1,5 +1,9 @@
-output "lambda_name" {
-  value = aws_lambda_function.demo.function_name
+output "writer_lambda_name" {
+  value = aws_lambda_function.writer.function_name
+}
+
+output "reader_lambda_name" {
+  value = aws_lambda_function.reader.function_name
 }
 
 output "datahike-s3-backend" {

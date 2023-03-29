@@ -1,10 +1,23 @@
 (ns clj-lambda-datahike.handler
-  (:require [clj-lambda-datahike.core :as core]))
+  (:require [clj-lambda-datahike.core :as core]
+            [jsonista.core :as json]))
+
+;; To read number from json into long value, so we can use :db.type/long
+(.configure json/keyword-keys-object-mapper com.fasterxml.jackson.databind.DeserializationFeature/USE_LONG_FOR_INTS true)
 
 (gen-class
   :name "clj_lambda_datahike.handler"
   :implements [com.amazonaws.services.lambda.runtime.RequestStreamHandler])
 
-(defn -handleRequest [this in out ctx]
-  (let [result (core/doit)]
-    (spit out result)))
+(defn -handleRequest [_this in out _ctx]
+  (case (System/getenv "BACKEND_ROLE")
+    "writer" (let [{:keys [command data]} (json/read-value in json/keyword-keys-object-mapper)
+                   result (case command
+                            "migrate" (core/migrate-db)
+                            (core/write-db data))]
+               (spit out (json/write-value-as-string {:result result
+                                                      :status "ok"})))
+    "reader" (spit out (json/write-value-as-string {:result (core/scan-db)
+                                                    :status "ok"}))
+    (spit out (json/write-value-as-string {:message "Unknown backend role"
+                                           :status "fail"}))))
