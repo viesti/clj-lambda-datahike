@@ -14,11 +14,11 @@
          :task (let [lambda-name (:out (shell {:out :string :dir "terraform"} "terraform" "output" "-raw" "writer_lambda_name"))
                      payload (first *command-line-args*)
                      payload-base64 (.encodeToString (java.util.Base64/getEncoder) (.getBytes payload))]
-                 (shell "aws" "lambda" "invoke" "--function-name" lambda-name "--payload" payload-base64 "out")
+                 (shell {:extra-env {"AWS_PAGER" ""}} "aws" "lambda" "invoke" "--function-name" lambda-name "--payload" payload-base64 "out")
                  (println (slurp "out")))}
   read {:doc "Invoke read lambda"
         :task (let [lambda-name (:out (shell {:out :string :dir "terraform"} "terraform" "output" "-raw" "reader_lambda_name"))]
-                (shell "aws" "lambda" "invoke" "--function-name" lambda-name "out")
+                (shell {:extra-env {"AWS_PAGER" ""}} "aws" "lambda" "invoke" "--function-name" lambda-name "out")
                 (println (slurp "out")))}
   tail-writer-logs {:doc "Tail writer lambda logs"
                     :task (tail "writer_lambda_name")}
