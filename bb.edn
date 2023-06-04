@@ -2,25 +2,56 @@
  {:init (do
           (def src "src.zip")
 
-          (defn tail [lambda-name]
-            (let [lambda-name (:out (shell {:out :string :dir "terraform"} "terraform" "output" "-raw" lambda-name))]
+          (defn tail [lambda-type]
+            (let [lambda-name (slurp (str "terraform/" lambda-type "-lambda-name.txt"))]
               (shell "aws" "logs" "tail" "--follow" (str "/aws/lambda/" lambda-name)))))
   :requires ([babashka.process :as p])
+
   build {:doc "Build lambda"
          :task (clojure "-T:build uber")}
+
   deploy {:doc "Deploy lambda"
           :task (shell {:dir "terraform"} "terraform" "apply")}
-  write {:doc "Invoke write lambda"
-         :task (let [lambda-name (:out (shell {:out :string :dir "terraform"} "terraform" "output" "-raw" "writer_lambda_name"))
-                     payload (first *command-line-args*)
-                     payload-base64 (.encodeToString (java.util.Base64/getEncoder) (.getBytes payload))]
-                 (shell {:extra-env {"AWS_PAGER" ""}} "aws" "lambda" "invoke" "--function-name" lambda-name "--payload" payload-base64 "out")
-                 (println (slurp "out")))}
-  read {:doc "Invoke read lambda"
-        :task (let [lambda-name (:out (shell {:out :string :dir "terraform"} "terraform" "output" "-raw" "reader_lambda_name"))]
-                (shell {:extra-env {"AWS_PAGER" ""}} "aws" "lambda" "invoke" "--function-name" lambda-name "out")
-                (println (slurp "out")))}
+
+  write {:doc "Call write URL"
+         :requires ([babashka.http-client :as http])
+         :task (let [write-url (slurp "terraform/writer-url.txt")
+                     payload (first *command-line-args*)]
+                 (println (http/post write-url {:body payload})))}
+
+  read {:doc "Call read URL"
+        :requires ([babashka.http-client :as http])
+        :task (let [read-url (slurp "terraform/reader-url.txt")]
+                (println (http/get read-url)))}
+
   tail-writer-logs {:doc "Tail writer lambda logs"
-                    :task (tail "writer_lambda_name")}
+                    :task (tail "writer")}
+
   tail-reader-logs {:doc "Tail reader lambda logs"
-                    :task (tail "reader_lambda_name")}}}
+                    :task (tail "reader")}
+
+  cleanup-lambda-versions {:doc "Removes all lambda versions except the one pointed to by latest-checkpoint alias"
+                           :requires ([cheshire.core :as json])
+                           :task (let [function-name (first *command-line-args*)
+                                       alias-name (second *command-line-args*)
+                                       latest-checkpoint (-> (shell {:out :string}
+                                                                    "aws" "lambda" "get-alias"
+                                                                    "--name" alias-name
+                                                                    "--function-name" function-name
+                                                                    "--out" "json")
+                                                             :out
+                                                             (json/parse-string true)
+                                                             :FunctionVersion)
+                                       functions (-> (shell {:out :string}
+                                                            "aws lambda list-functions --function-version ALL")
+                                                     :out
+                                                     (json/parse-string true)
+                                                     :Functions)
+                                       functions (remove (fn [{:keys [Version]}]
+                                                           (or (= Version latest-checkpoint)
+                                                               (= Version "$LATEST")))
+                                                         functions)]
+                                   (doseq [{:keys [Version]} functions]
+                                     (println "Deleting" function-name "version" Version)
+                                     (shell "aws" "lambda" "delete-function"
+                                            "--function-name" function-name "--qualifier" Version)))}}}

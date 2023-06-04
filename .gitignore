@@ -9,3 +9,7 @@ target
 terraform.tfstate
 terraform.tfstate.backup
 out
+terraform/reader-url.txt
+terraform/writer-url.txt
+terraform/reader-lambda-name.txt
+terraform/writer-lambda-name.txt

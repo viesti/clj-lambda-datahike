@@ -27,6 +27,12 @@ resource "aws_lambda_function" "writer" {
       BACKEND_ROLE = "writer"
     }
   }
+
+  publish = true
+
+  snap_start {
+    apply_on = "PublishedVersions"
+  }
 }
 
 resource "aws_lambda_function" "reader" {
@@ -51,16 +57,82 @@ resource "aws_lambda_function" "reader" {
       BACKEND_ROLE = "reader"
     }
   }
+
+  publish = true
+
+  snap_start {
+    apply_on = "PublishedVersions"
+  }
+}
+
+resource "aws_lambda_alias" "writer-latest-checkpoint" {
+  name             = "writer-latest-checkpoint"
+  description      = "Points to the latest Snapstart checkpoint version"
+  function_name    = aws_lambda_function.writer.arn
+  function_version = aws_lambda_function.writer.version
+}
+
+resource "null_resource" "writer-cleanup-lambda-versions" {
+  triggers = {
+    lambda_version = aws_lambda_alias.writer-latest-checkpoint.function_version
+  }
+
+  provisioner "local-exec" {
+    working_dir = ".."
+    command = "bb run cleanup-lambda-versions ${aws_lambda_function.writer.function_name} writer-latest-checkpoint"
+  }
+}
+
+resource "null_resource" "reader-cleanup-lambda-versions" {
+  triggers = {
+    lambda_version = aws_lambda_alias.reader-latest-checkpoint.function_version
+  }
+
+  provisioner "local-exec" {
+    working_dir = ".."
+    command = "bb run cleanup-lambda-versions ${aws_lambda_function.reader.function_name} reader-latest-checkpoint"
+  }
+}
+
+resource "aws_lambda_alias" "reader-latest-checkpoint" {
+  name             = "reader-latest-checkpoint"
+  description      = "Points to the latest Snapstart checkpoint version"
+  function_name    = aws_lambda_function.reader.arn
+  function_version = aws_lambda_function.reader.version
 }
 
 resource "aws_lambda_function_url" "writer" {
   function_name      = aws_lambda_function.writer.function_name
   authorization_type = "NONE"
+
+  qualifier = aws_lambda_alias.writer-latest-checkpoint.name
 }
 
 resource "aws_lambda_function_url" "reader" {
   function_name      = aws_lambda_function.reader.function_name
   authorization_type = "NONE"
+
+  qualifier = aws_lambda_alias.reader-latest-checkpoint.name
+}
+
+resource "local_file" "writer-url-file" {
+  content  = aws_lambda_function_url.writer.function_url
+  filename = "${path.module}/writer-url.txt"
+}
+
+resource "local_file" "reader-url-file" {
+  content  = aws_lambda_function_url.reader.function_url
+  filename = "${path.module}/reader-url.txt"
+}
+
+resource "local_file" "writer-lambda-name-file" {
+  content  = aws_lambda_function.writer.function_name
+  filename = "${path.module}/writer-lambda-name.txt"
+}
+
+resource "local_file" "reader-lambda-name-file" {
+  content  = aws_lambda_function.reader.function_name
+  filename = "${path.module}/reader-lambda-name.txt"
 }
 
 resource "aws_iam_role" "lambda" {

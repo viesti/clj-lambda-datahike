@@ -9,15 +9,18 @@
   :name "clj_lambda_datahike.handler"
   :implements [com.amazonaws.services.lambda.runtime.RequestStreamHandler])
 
+
+#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn -handleRequest [_this in out _ctx]
   (case (System/getenv "BACKEND_ROLE")
-    "writer" (let [{:keys [command data]} (json/read-value in json/keyword-keys-object-mapper)
+    "writer" (let [{:keys [body] :as _event} (json/read-value in json/keyword-keys-object-mapper)
+                   {:keys [command data]} (json/read-value body json/keyword-keys-object-mapper)
                    result (case command
                             "migrate" (core/migrate-db)
                             (core/write-db data))]
-               (spit out (json/write-value-as-string {:result result
-                                                      :status "ok"})))
-    "reader" (spit out (json/write-value-as-string {:result (core/scan-db)
-                                                    :status "ok"}))
-    (spit out (json/write-value-as-string {:message "Unknown backend role"
-                                           :status "fail"}))))
+               (spit out (json/write-value-as-string {:statusCode 200
+                                                      :body (json/write-value-as-string result)})))
+    "reader" (spit out (json/write-value-as-string {:statusCode 200
+                                                    :body (json/write-value-as-string (core/scan-db))}))
+    (spit out (json/write-value-as-string {:statusCode 500
+                                           :body (json/write-value-as-string {:message "Unknown backend role"})}))))

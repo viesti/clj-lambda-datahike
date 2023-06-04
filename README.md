@@ -14,6 +14,8 @@ Then deploy infra. This will deploy two Lambda instances, one for writing and on
 
 The writer Lambda is configured to use reserved concurrency of 1, so that we would have a single writer only.
 
+Both Lambdas are configured to be accessible via Lambda Function URL without authentication, so you can call them via HTTP.
+
 ```
 bb run deploy
 ```
@@ -21,23 +23,15 @@ bb run deploy
 Then, migrate schema:
 
 ```
-bb run write '{"command": "migrate"}'
-{"result":"ok","status":"ok"}
+$ curl -X POST $(cat terraform/writer-url.txt) -H "content-type: application/json" -d '{"command": "migrate"}'
+"ok"
 ```
 
 After this, you can do writes and reads by invoking the Lambdas.
 
 ```
-0% bb run write '{"data": [{"name": "Alice", "age": 32}]}'
-{
-    "StatusCode": 200,
-    "ExecutedVersion": "$LATEST"
-}
-{"result":"ok","status":"ok"}
-0% bb run read
-{
-    "StatusCode": 200,
-    "ExecutedVersion": "$LATEST"
-}
-{"result":[[3,"Alice",32]],"status":"ok"}
+$ curl -X POST $(cat terraform/writer-url.txt) -H "content-type: application/json" -d '{"data": [{"name": "Alice", "age": 32}]}'
+"ok"
+0% curl $(cat terraform/reader-url.txt)
+[[4,"Alice",32]]
 ```
