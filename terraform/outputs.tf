@@ -9,3 +9,11 @@ output "reader_lambda_name" {
 output "datahike-s3-backend" {
   value = aws_s3_bucket.datahike-s3-backend.id
 }
+
+output "write_url" {
+  value = aws_lambda_function_url.writer.function_url
+}
+
+output "read_url" {
+  value = aws_lambda_function_url.reader.function_url
+}

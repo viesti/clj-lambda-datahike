@@ -53,6 +53,16 @@ resource "aws_lambda_function" "reader" {
   }
 }
 
+resource "aws_lambda_function_url" "writer" {
+  function_name      = aws_lambda_function.writer.function_name
+  authorization_type = "NONE"
+}
+
+resource "aws_lambda_function_url" "reader" {
+  function_name      = aws_lambda_function.reader.function_name
+  authorization_type = "NONE"
+}
+
 resource "aws_iam_role" "lambda" {
   name               = "${random_pet.demo.id}-demo"
   assume_role_policy = jsonencode({
