@@ -15,7 +15,7 @@ resource "aws_lambda_function" "writer" {
   s3_key           = aws_s3_object.lambda.key
   source_code_hash = filebase64sha256("../target/lambda.jar")
 
-  runtime = "java11"
+  runtime = "java17"
 
   memory_size = 3008
 
@@ -45,7 +45,7 @@ resource "aws_lambda_function" "reader" {
   s3_key           = aws_s3_object.lambda.key
   source_code_hash = filebase64sha256("../target/lambda.jar")
 
-  runtime = "java11"
+  runtime = "java17"
 
   memory_size = 3008
 
