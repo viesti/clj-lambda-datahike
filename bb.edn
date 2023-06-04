@@ -47,9 +47,10 @@
                                                      :out
                                                      (json/parse-string true)
                                                      :Functions)
-                                       functions (remove (fn [{:keys [Version]}]
+                                       functions (remove (fn [{:keys [Version FunctionName]}]
                                                            (or (= Version latest-checkpoint)
-                                                               (= Version "$LATEST")))
+                                                               (= Version "$LATEST")
+                                                               (not= FunctionName function-name)))
                                                          functions)]
                                    (doseq [{:keys [Version]} functions]
                                      (println "Deleting" function-name "version" Version)
