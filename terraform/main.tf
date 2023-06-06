@@ -25,6 +25,7 @@ resource "aws_lambda_function" "writer" {
     variables = {
       DATAHIKE_S3_BACKEND = aws_s3_bucket.datahike-s3-backend.id
       BACKEND_ROLE = "writer"
+      API_KEY = random_string.api-key.result
     }
   }
 
@@ -55,6 +56,7 @@ resource "aws_lambda_function" "reader" {
     variables = {
       DATAHIKE_S3_BACKEND = aws_s3_bucket.datahike-s3-backend.id
       BACKEND_ROLE = "reader"
+      API_KEY = random_string.api-key.result
     }
   }
 
@@ -219,4 +221,13 @@ resource "aws_s3_object" "lambda" {
 
   source      = "../target/lambda.jar"
   source_hash = filemd5("../target/lambda.jar")
+}
+
+resource "random_string" "api-key" {
+  length = 16
+}
+
+resource "local_file" "api-key-file" {
+  content  = random_string.api-key.result
+  filename = "${path.module}/api-key.txt"
 }

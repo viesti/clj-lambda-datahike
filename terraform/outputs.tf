@@ -17,3 +17,7 @@ output "write_url" {
 output "read_url" {
   value = aws_lambda_function_url.reader.function_url
 }
+
+output "api_key" {
+  value = random_string.api-key.result
+}

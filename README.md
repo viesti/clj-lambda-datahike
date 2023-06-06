@@ -23,14 +23,14 @@ bb run deploy
 Then, migrate schema:
 
 ```
-$ curl -X POST $(cat terraform/writer-url.txt) -H "content-type: application/json" -d '{"command": "migrate"}'
+$ curl -X POST $(cat terraform/writer-url.txt) -H "content-type: application/json" -H "X-API-KEY: $(cat terraform/api-key.txt)" -d '{"command": "migrate"}'
 "ok"
 ```
 
 After this, you can do writes and reads by invoking the Lambdas.
 
 ```
-$ curl -X POST $(cat terraform/writer-url.txt) -H "content-type: application/json" -d '{"data": [{"name": "Alice", "age": 32}]}'
+$ curl -X POST $(cat terraform/writer-url.txt) -H "content-type: application/json" -H "X-API-KEY: $(cat terraform/api-key.txt)" -d '{"data": [{"name": "Alice", "age": 32}]}'
 "ok"
 0% curl $(cat terraform/reader-url.txt)
 [[4,"Alice",32]]
