@@ -1,0 +1,42 @@
+name: Build uberjar
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: avrea-ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Clojure
+        uses: DeLaGuardo/setup-clojure@13.4
+        with:
+          cli: latest
+
+      - name: Cache Maven and gitlibs
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.m2/repository
+            ~/.gitlibs
+          key: ${{ runner.os }}-deps-${{ hashFiles('deps.edn') }}
+          restore-keys: ${{ runner.os }}-deps-
+
+      - name: Build uberjar
+        run: clojure -T:build uber
+
+      - name: Upload uberjar
+        uses: actions/upload-artifact@v4
+        with:
+          name: lambda
+          path: target/lambda.jar
+          if-no-files-found: error
