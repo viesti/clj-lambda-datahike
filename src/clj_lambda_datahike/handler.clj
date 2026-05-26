@@ -13,7 +13,7 @@
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn -handleRequest [_this in out _ctx]
   (let [{:keys [body headers] :as _event} (json/read-value in json/keyword-keys-object-mapper)]
-    (if-not (= (System/getenv "API_KEY") (get headers "X-API-KEY"))
+    (if-not (= (System/getenv "API_KEY") (get headers :x-api-key))
       (spit out (json/write-value-as-string {:statusCode 401
                                              :body (json/write-value-as-string {:message "Unauthorized"})}))
       (case (System/getenv "BACKEND_ROLE")
